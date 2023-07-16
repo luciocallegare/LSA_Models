@@ -12,10 +12,11 @@ def identifyHands(landmark,frame,width,height,i):
     minHeight =int((min(landmark, key = lambda p:p.y).y)*height)-20
     left =int((min(landmark, key = lambda p:p.x).x) *width)-20
     right = int((max(landmark, key = lambda p:p.x).x)*width)+20
-    onlyHands = frame[minHeight:maxHeight,left:right]
-    if 0 not in onlyHands.shape:
-        cv2.imshow(f'{i} hand',onlyHands)
-    return cv2.rectangle(frame,(left,maxHeight),(right,minHeight),(0,0,255),4)
+    onlyHands = {
+        'img':frame[minHeight:maxHeight,left:right],
+        'type': i
+    }
+    return (cv2.rectangle(frame,(left,maxHeight),(right,minHeight),(0,0,255),4), onlyHands)
 
 with mp_hands.Hands(
     static_image_mode= False,
@@ -34,16 +35,18 @@ with mp_hands.Hands(
 
         results = hands.process(frame_rgb)
         if results.multi_hand_landmarks is not None:
-            label = ''
+            handsImg = []
             for i,hand_landmarks in enumerate(results.multi_hand_landmarks):
                 label = results.multi_handedness[i].classification[0].label
                 mp_drawing.draw_landmarks( frame,hand_landmarks,mp_hands.HAND_CONNECTIONS)
-                frame = identifyHands(hand_landmarks.landmark,frame,width,height,label)
-            if len(results.multi_hand_landmarks) == 1:
-                print(label)
-                if label == 'Right' and cv2.getWindowProperty("Left hand",cv2.WND_PROP_VISIBLE) > 0:
+                (frame,onlyHands) = identifyHands(hand_landmarks.landmark,frame,width,height,label)
+                if 0 not in onlyHands['img'].shape:
+                    handsImg.append(onlyHands)
+                    cv2.imshow(f'{onlyHands["type"]} hand',onlyHands['img'])
+            if len(handsImg) == 1:
+                if handsImg[0]['type'] == 'Right' and cv2.getWindowProperty("Left hand",cv2.WND_PROP_VISIBLE) > 0:
                   cv2.destroyWindow("Left hand")
-                elif label == 'Left' and cv2.getWindowProperty("Right hand",cv2.WND_PROP_VISIBLE) > 0:
+                elif handsImg[0]['type'] == 'Left' and cv2.getWindowProperty("Right hand",cv2.WND_PROP_VISIBLE) > 0:
                   cv2.destroyWindow("Right hand")    
         else:
             if (cv2.getWindowProperty("Right hand",cv2.WND_PROP_VISIBLE) > 0):
