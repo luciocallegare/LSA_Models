@@ -34,10 +34,22 @@ with mp_hands.Hands(
 
         results = hands.process(frame_rgb)
         if results.multi_hand_landmarks is not None:
+            label = ''
             for i,hand_landmarks in enumerate(results.multi_hand_landmarks):
                 label = results.multi_handedness[i].classification[0].label
                 mp_drawing.draw_landmarks( frame,hand_landmarks,mp_hands.HAND_CONNECTIONS)
                 frame = identifyHands(hand_landmarks.landmark,frame,width,height,label)
+            if len(results.multi_hand_landmarks) == 1:
+                print(label)
+                if label == 'Right' and cv2.getWindowProperty("Left hand",cv2.WND_PROP_VISIBLE) > 0:
+                  cv2.destroyWindow("Left hand")
+                elif label == 'Left' and cv2.getWindowProperty("Right hand",cv2.WND_PROP_VISIBLE) > 0:
+                  cv2.destroyWindow("Right hand")    
+        else:
+            if (cv2.getWindowProperty("Right hand",cv2.WND_PROP_VISIBLE) > 0):
+                cv2.destroyWindow("Right hand")
+            if (cv2.getWindowProperty("Left hand",cv2.WND_PROP_VISIBLE) > 0):
+                cv2.destroyWindow("Left hand")
         cv2.imshow("Frame",frame)
         if cv2.waitKey(1) & 0xFF == 27:
             break
