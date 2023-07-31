@@ -1,0 +1,322 @@
+[
+  {
+    "id": "01",
+    "name": "Opaco",
+    "handsUsed": "R"
+  },
+  {
+    "id": "02",
+    "name": "Rojo",
+    "handsUsed": "R"
+  },
+  {
+    "id": "03",
+    "name": "Verde",
+    "handsUsed": "R"
+  },
+  {
+    "id": "04",
+    "name": "Amarillo",
+    "handsUsed": "R"
+  },
+  {
+    "id": "05",
+    "name": "Brillante",
+    "handsUsed": "R"
+  },
+  {
+    "id": "06",
+    "name": "Azul claro",
+    "handsUsed": "R"
+  },
+  {
+    "id": "07",
+    "name": "Colores",
+    "handsUsed": "R"
+  },
+  {
+    "id": "08",
+    "name": "Rosa",
+    "handsUsed": "R"
+  },
+  {
+    "id": "09",
+    "name": "Mujer",
+    "handsUsed": "R"
+  },
+  {
+    "id": "10",
+    "name": "Enemigo",
+    "handsUsed": "R"
+  },
+  {
+    "id": "11",
+    "name": "Hijo",
+    "handsUsed": "R"
+  },
+  {
+    "id": "12",
+    "name": "Hombre",
+    "handsUsed": "R"
+  },
+  {
+    "id": "13",
+    "name": "Lejos",
+    "handsUsed": "R"
+  },
+  {
+    "id": "14",
+    "name": "Cajón",
+    "handsUsed": "R"
+  },
+  {
+    "id": "15",
+    "name": "Nacido",
+    "handsUsed": "R"
+  },
+  {
+    "id": "16",
+    "name": "Aprender",
+    "handsUsed": "R"
+  },
+  {
+    "id": "17",
+    "name": "Llamar",
+    "handsUsed": "R"
+  },
+  {
+    "id": "18",
+    "name": "Skimmer",
+    "handsUsed": "R"
+  },
+  {
+    "id": "19",
+    "name": "Amargo",
+    "handsUsed": "R"
+  },
+  {
+    "id": "20",
+    "name": "Leche dulce",
+    "handsUsed": "R"
+  },
+  {
+    "id": "21",
+    "name": "Leche",
+    "handsUsed": "R"
+  },
+  {
+    "id": "22",
+    "name": "Agua",
+    "handsUsed": "R"
+  },
+  {
+    "id": "23",
+    "name": "Alimento",
+    "handsUsed": "R"
+  },
+  {
+    "id": "24",
+    "name": "Argentina",
+    "handsUsed": "R"
+  },
+  {
+    "id": "25",
+    "name": "Uruguay",
+    "handsUsed": "R"
+  },
+  {
+    "id": "26",
+    "name": "País",
+    "handsUsed": "R"
+  },
+  {
+    "id": "27",
+    "name": "Apellido",
+    "handsUsed": "R"
+  },
+  {
+    "id": "28",
+    "name": "Dónde",
+    "handsUsed": "R"
+  },
+  {
+    "id": "29",
+    "name": "Burlarse de",
+    "handsUsed": "B"
+  },
+  {
+    "id": "30",
+    "name": "Cumpleaños",
+    "handsUsed": "R"
+  },
+  {
+    "id": "31",
+    "name": "Desayuno",
+    "handsUsed": "B"
+  },
+  {
+    "id": "32",
+    "name": "Foto",
+    "handsUsed": "B"
+  },
+  {
+    "id": "33",
+    "name": "Hambriento",
+    "handsUsed": "R"
+  },
+  {
+    "id": "34",
+    "name": "Mapa",
+    "handsUsed": "B"
+  },
+  {
+    "id": "35",
+    "name": "Moneda",
+    "handsUsed": "B"
+  },
+  {
+    "id": "36",
+    "name": "Música",
+    "handsUsed": "B"
+  },
+  {
+    "id": "37",
+    "name": "Barco",
+    "handsUsed": "R"
+  },
+  {
+    "id": "38",
+    "name": "Ninguno",
+    "handsUsed": "R"
+  },
+  {
+    "id": "39",
+    "name": "Nombre",
+    "handsUsed": "R"
+  },
+  {
+    "id": "40",
+    "name": "Paciencia",
+    "handsUsed": "R"
+  },
+  {
+    "id": "41",
+    "name": "Perfume",
+    "handsUsed": "R"
+  },
+  {
+    "id": "42",
+    "name": "Sordo",
+    "handsUsed": "R"
+  },
+  {
+    "id": "43",
+    "name": "Trampa",
+    "handsUsed": "B"
+  },
+  {
+    "id": "44",
+    "name": "Arroz",
+    "handsUsed": "B"
+  },
+  {
+    "id": "45",
+    "name": "Parilla",
+    "handsUsed": "B"
+  },
+  {
+    "id": "46",
+    "name": "Dulce",
+    "handsUsed": "R"
+  },
+  {
+    "id": "47",
+    "name": "Chicle",
+    "handsUsed": "R"
+  },
+  {
+    "id": "48",
+    "name": "Espaguetis",
+    "handsUsed": "B"
+  },
+  {
+    "id": "49",
+    "name": "Yogur",
+    "handsUsed": "B"
+  },
+  {
+    "id": "50",
+    "name": "Aceptar",
+    "handsUsed": "B"
+  },
+  {
+    "id": "51",
+    "name": "Gracias",
+    "handsUsed": "B"
+  },
+  {
+    "id": "52",
+    "name": "Cerrar",
+    "handsUsed": "R"
+  },
+  {
+    "id": "53",
+    "name": "Aparecer",
+    "handsUsed": "B"
+  },
+  {
+    "id": "54",
+    "name": "Aterrizar",
+    "handsUsed": "B"
+  },
+  {
+    "id": "55",
+    "name": "Atrapar",
+    "handsUsed": "B"
+  },
+  {
+    "id": "56",
+    "name": "Ayuda",
+    "handsUsed": "B"
+  },
+  {
+    "id": "57",
+    "name": "Bailar",
+    "handsUsed": "B"
+  },
+  {
+    "id": "58",
+    "name": "Bañarse",
+    "handsUsed": "B"
+  },
+  {
+    "id": "59",
+    "name": "Comprar",
+    "handsUsed": "R"
+  },
+  {
+    "id": "60",
+    "name": "Copiar",
+    "handsUsed": "B"
+  },
+  {
+    "id": "61",
+    "name": "Correr",
+    "handsUsed": "B"
+  },
+  {
+    "id": "62",
+    "name": "Darse cuenta",
+    "handsUsed": "R"
+  },
+  {
+    "id": "63",
+    "name": "Dar",
+    "handsUsed": "B"
+  },
+  {
+    "id": "64",
+    "name": "Encontrar",
+    "handsUsed": "R"
+  }
+]
