@@ -1,7 +1,5 @@
 import cv2
-import mediapipe as mp
 import numpy as np
-from zipfile import ZipFile
 import json
 import os
 from tqdm import tqdm
@@ -46,7 +44,7 @@ def handSegmentByHand(frame,hand):
 def processVideo(video,path):
     cap = cv2.VideoCapture(video)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(path, fourcc, 30.0, (640,480),0)
+    out = cv2.VideoWriter(path, fourcc, 30.0, (224,224),0)
     nframe = 0
     #print('PROCESS VIDEO PATH',path)
     #print('PROCESS VIDEO VIDEO',video)
@@ -55,15 +53,14 @@ def processVideo(video,path):
         if ret == False:
             break
         nframe += 1
-        frame = cv2.resize(frame,(640,480))        
+        frame = cv2.resize(frame,(224,224))        
         frame = cv2.flip(frame,1)
         frame = handSegment(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         cv2.imshow('output',frame)
         if cv2.waitKey(1) & 0xFF == 27:
             break
-        if (nframe <= 60):
-            out.write(frame)
+        out.write(frame)
     cap.release()
     out.release()
 
