@@ -110,8 +110,6 @@ def groupFrames(video_path, n_frames = N_FRAMES, frame_step = 15):
   result = np.array(result)
   #print('SHAPE RESULT',result.shape)
   return result
-#### hacer funcion que realice dos arrays: x e y. x va a ser un array de arrays de imagenes (videos) 
-##### e y va hacer un array de etiquetas que van a salir de los nombres de los archivos    
 
 #input_shape = (cant_videos,cant_frames,img_size)
 
