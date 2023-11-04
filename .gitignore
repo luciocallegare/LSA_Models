@@ -160,3 +160,6 @@ cython_debug/
 #.idea/
 /dataset
 /dataset2
+/dataset_full
+/*.sh
+/prueba1.avi
