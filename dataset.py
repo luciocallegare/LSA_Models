@@ -14,7 +14,7 @@ boundaries = [
 N_TRAIN = 30
 N_TEST = 10
 videoPath = "C:\\Users\\Lucio\\Documents\\all"
-
+nameDataset = 'dataset'
 def getClassId(filename):
     infoFile = filename.split('/')[1]
     return infoFile.split('_')[0][1:]
@@ -57,9 +57,9 @@ def processVideo(video,path):
         frame = cv2.flip(frame,1)
         frame = handSegment(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        cv2.imshow('output',frame)
-        if cv2.waitKey(1) & 0xFF == 27:
-            break
+        #cv2.imshow('output',frame)
+        #if cv2.waitKey(1) & 0xFF == 27:
+            #break
         out.write(frame)
     cap.release()
     out.release()
@@ -81,10 +81,11 @@ def createDataset(qTrain,qTest):
     f = open('./dataset.json')
     label = json.load(f)
     labelsWithVids = getVideosPerClass(label,videoList)
-    train_dir = pathlib.Path('./dataset/train')
-    test_dir = pathlib.Path('./dataset/test')
-    val_dir = pathlib.Path('./dataset/val')
-    print(train_dir)
+    dataset_dir = pathlib.Path(f'./{nameDataset}')
+    train_dir = pathlib.Path(f'./{nameDataset}/train')
+    test_dir = pathlib.Path(f'./{nameDataset}/test')
+    val_dir = pathlib.Path(f'./{nameDataset}/val')
+    os.mkdir(dataset_dir)
     os.mkdir(train_dir)
     os.mkdir(test_dir)
     os.mkdir(val_dir)
@@ -97,15 +98,15 @@ def createDataset(qTrain,qTest):
         print(f'Processing {videoInfo["name"]}...')
 
         os.mkdir(os.path.join(train_dir,videoInfo["name"]))
-        fullPath =  pathlib.Path('./dataset/train/'+videoInfo["name"])
+        fullPath =  pathlib.Path(f'./{nameDataset}/train/'+videoInfo["name"])
         downloadVideos(trainVideos,fullPath)
 
         os.mkdir(os.path.join(test_dir,videoInfo["name"]))
-        fullPath =  pathlib.Path('./dataset/test/'+videoInfo["name"])
+        fullPath =  pathlib.Path(f'./{nameDataset}/test/'+videoInfo["name"])
         downloadVideos(testVideos,fullPath)
 
         os.mkdir(os.path.join(val_dir,videoInfo["name"]))
-        fullPath =  pathlib.Path('./dataset/val/'+videoInfo["name"])
+        fullPath =  pathlib.Path(f'./{nameDataset}/val/'+videoInfo["name"])
         downloadVideos(valVideos,fullPath)
 
 createDataset(N_TRAIN,N_TEST)

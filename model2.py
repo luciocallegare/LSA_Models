@@ -1,36 +1,45 @@
-from keras.models import Sequential
-from keras.layers import ConvLSTM2D, Flatten, MaxPooling3D,TimeDistributed,Dropout, Conv2D,MaxPooling2D, LSTM, Reshape, Dense
-from keras.callbacks import EarlyStopping
+from keras.models import Sequential,load_model
+from keras.layers import ConvLSTM2D, Flatten, MaxPooling3D,TimeDistributed,Dropout, Conv2D,MaxPooling2D, LSTM, Dense
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.applications import EfficientNetB0
 from keras.utils import to_categorical
 import cv2
 import numpy as np
 import json
 import pathlib
 import random
+import os
 
 HEIGHT = 224
 WIDTH = 224
 N_FRAMES = 20
 num_classes = 64
 
+nameModel = 'modelFullVids'
+
 subset_paths = {
-  'train': pathlib.Path('./dataset/train'),
-  'val': pathlib.Path('./dataset/val'),
-  'test': pathlib.Path('./dataset/test')
+  'train': pathlib.Path('./dataset_full/train'),
+  'val': pathlib.Path('./dataset_full/val'),
+  'test': pathlib.Path('./dataset_full/test')
 }
 
-def convPlusLSTM():
+def LRCN():
     model = Sequential()
     # Capas convolucionales para procesar cada cuadro de video
-    model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(WIDTH, HEIGHT, 1)))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Reshape((N_FRAMES, -1)))
+    model.add(TimeDistributed(Conv2D(16, (3, 3), padding='same', activation='relu'), input_shape=(N_FRAMES,WIDTH, HEIGHT, 1)))
+    model.add(TimeDistributed(MaxPooling2D(pool_size=(4, 4))))
+    model.add(TimeDistributed(Dropout(0.25)))
+
+    model.add(TimeDistributed(Conv2D(32, (3, 3), padding='same', activation='relu')))
+    model.add(TimeDistributed(MaxPooling2D(pool_size=(4, 4))))
+    model.add(TimeDistributed(Dropout(0.25)))
+
+    model.add(TimeDistributed(Conv2D(64, (3, 3), padding='same', activation='relu')))
+    model.add(TimeDistributed(MaxPooling2D(pool_size=(4, 4))))
 
     # Capas LSTM para manejar la secuencialidad temporal
-    model.add(LSTM(128, return_sequences=True))
-    model.add(LSTM(64))
+    model.add(TimeDistributed(Flatten()))
+    model.add(LSTM(32))
 
     # Capa de salida con neuronas igual al número de clases de lengua de señas
     model.add(Dense(num_classes, activation='softmax'))
@@ -83,7 +92,7 @@ def groupFrames(video_path, n_frames = N_FRAMES, frame_step = 15):
   # Read each video frame by frame
   result = []
   src = cv2.VideoCapture(video_path)  
-
+  #print('Procesando video:',video_path)
   video_length = src.get(cv2.CAP_PROP_FRAME_COUNT)
   need_length = 1 + (n_frames - 1) * frame_step
   if need_length > video_length:
@@ -114,6 +123,8 @@ def groupFrames(video_path, n_frames = N_FRAMES, frame_step = 15):
 #input_shape = (cant_videos,cant_frames,img_size)
 
 def find_id(labels,name):
+   encoded_string = name.encode('latin-1')
+   name = encoded_string.decode("utf-8")
    return list(filter(lambda x: x['name'] == name,labels))[0]
 
 def get_files_and_class_names(path):
@@ -123,7 +134,7 @@ def get_files_and_class_names(path):
     labels = json.load(f)
     classes = np.array(list(map(lambda x: int(find_id(labels,x)['id'])-1,classes)))
     encoded_labels = to_categorical(classes)
-    videos = np.array([groupFrames(str(p)) for p in video_paths ])
+    videos = np.array([groupFrames(str(p)) for p in video_paths ],dtype='float16')
     return videos, classes
 
 def cant_frames_promedio(path):
@@ -133,17 +144,29 @@ def cant_frames_promedio(path):
     return sum(cant_frames)/len(cant_frames)
 
 print('Preparando datos...')
-x_train, y_train = get_files_and_class_names(subset_paths['train'])
-X_val, y_val = get_files_and_class_names(subset_paths['val'])
+#x_train, y_train = get_files_and_class_names(subset_paths['train'])
+#X_val, y_val = get_files_and_class_names(subset_paths['val'])
+
+x_train = np.load('x_train_full.npy')
+y_train = np.load('y_train_full.npy')
+X_val = np.load('x_val_full.npy')
+y_val = np.load('y_val_full.npy')
 
 print('shape x_train:', x_train.shape)
 print('Empezando creacion de modelo y entrenamiento...')
 
-model = convLSTM()
 early_stopping_callback = EarlyStopping(monitor='val_loss', patience=10, mode='min', restore_best_weights= True)
+checkpoint_callback = ModelCheckpoint(nameModel,save_best_only=True,monitor='val_loss',mode='min')
 
-model.compile(loss='sparse_categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
-model.summary()
-model.fit(x_train, y_train, epochs=50, validation_data=(X_val, y_val),callbacks=[early_stopping_callback])
+if os.path.exists(f'./{nameModel}'):
+   print('Loading saved model...')
+   model = load_model(f'./{nameModel}')
+   model.fit(x_train, y_train, epochs=1, batch_size=32, validation_data=(X_val, y_val),callbacks=[early_stopping_callback,checkpoint_callback])
+   model.save(nameModel)
+else:
+  model = convLSTM()
+  model.compile(loss='sparse_categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
+  model.summary()
+  model.fit(x_train, y_train, epochs=50, batch_size=32, validation_data=(X_val, y_val),callbacks=[early_stopping_callback,checkpoint_callback])
 
-model.save('modelConvLSTM')
+  model.save(nameModel)

@@ -31,8 +31,8 @@ def groupFrames(video_path, n_frames = N_FRAMES, frame_step = 15):
   # Read each video frame by frame
   result = []
   src = cv2.VideoCapture(video_path)  
-
   video_length = src.get(cv2.CAP_PROP_FRAME_COUNT)
+  print(f'Video url: {video_path}, video_length:{video_length.decode("utf-8")}')
   need_length = 1 + (n_frames - 1) * frame_step
   if need_length > video_length:
     start = 0
@@ -42,22 +42,25 @@ def groupFrames(video_path, n_frames = N_FRAMES, frame_step = 15):
   src.set(cv2.CAP_PROP_POS_FRAMES, start)
   # ret is a boolean indicating whether read was successful, frame is the image itself
   ret, frame = src.read()
-  print(f'LEYO BIEN EL FRAME:{ret}')
   if ret:
+      cv2.imshow('prueba',frame)  
       frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
       frame = np.expand_dims(frame, axis=-1) 
       result.append(frame/255)
   for _ in range(n_frames - 1):
     for _ in range(frame_step):
       ret, frame = src.read()
-    print(f'LEYO BIEN EL FRAME:{ret}')
     if ret:
+        cv2.imshow('prueba',frame)
+        if cv2.waitKey(1) & 0xFF == 27:
+            break        
         frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
         frame = np.expand_dims(frame, axis=-1) 
         result.append(frame/255)
     else:
       result.append(np.zeros_like(result[0]))
   src.release()
+  cv2.destroyAllWindows()
   result = np.array(result)
   #print('SHAPE RESULT',result.shape)
   return result
