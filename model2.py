@@ -161,12 +161,12 @@ checkpoint_callback = ModelCheckpoint(nameModel,save_best_only=True,monitor='val
 if os.path.exists(f'./{nameModel}'):
    print('Loading saved model...')
    model = load_model(f'./{nameModel}')
-   model.fit(x_train, y_train, epochs=1, batch_size=32, validation_data=(X_val, y_val),callbacks=[early_stopping_callback,checkpoint_callback])
+   model.fit(x_train, y_train, epochs=50, batch_size=8, validation_data=(X_val, y_val),callbacks=[early_stopping_callback,checkpoint_callback])
    model.save(nameModel)
 else:
   model = convLSTM()
   model.compile(loss='sparse_categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
   model.summary()
-  model.fit(x_train, y_train, epochs=50, batch_size=32, validation_data=(X_val, y_val),callbacks=[early_stopping_callback,checkpoint_callback])
+  model.fit(x_train, y_train, epochs=50, batch_size=8, validation_data=(X_val, y_val),callbacks=[early_stopping_callback,checkpoint_callback])
 
   model.save(nameModel)

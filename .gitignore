@@ -163,3 +163,4 @@ cython_debug/
 /dataset_full
 /*.sh
 /prueba1.avi
+/*.npy
