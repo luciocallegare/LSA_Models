@@ -5,6 +5,7 @@ import os
 from tqdm import tqdm
 import pathlib
 import random
+import copy
 
 boundaries = [
     ([0, 120, 0], [140, 255, 100]), #VERDE Izquierda
@@ -13,8 +14,9 @@ boundaries = [
 
 N_TRAIN = 30
 N_TEST = 10
-videoPath = "C:\\Users\\Lucio\\Documents\\all"
-nameDataset = 'dataset'
+videoPath = "./pruebas/all"
+videoPathAugmented = "./pruebas/dataAugmented"
+nameDataset = 'dataset_augmented_cropped'
 def getClassId(filename):
     infoFile = filename.split('/')[1]
     return infoFile.split('_')[0][1:]
@@ -70,17 +72,22 @@ def getVideosPerClass(dict,videos):
         elem['videoNames'] = list(filter(lambda x:x.split('_')[0] == idVids,videos))
     return dict
 
-def downloadVideos(videoPaths,destPath):
+def downloadVideos(rootPath,videoPaths,destPath):
     print(f"{destPath}:")
     for video in tqdm(videoPaths):
         videoDest = video.replace('mp4','avi')
-        processVideo(os.path.join(videoPath,video),str(destPath)+'/'+videoDest)
+        processVideo(os.path.join(rootPath,video),str(destPath)+'/'+videoDest)
         
 def createDataset(qTrain,qTest):
     videoList = os.listdir(videoPath)
+    videoListAug = os.listdir(videoPathAugmented)
+    print(len(videoList))
+    print(len(videoListAug))
     f = open('./dataset.json')
     label = json.load(f)
+    labelAug = copy.deepcopy(label)
     labelsWithVids = getVideosPerClass(label,videoList)
+    labelsAugVids = getVideosPerClass(labelAug,videoListAug)
     dataset_dir = pathlib.Path(f'./{nameDataset}')
     train_dir = pathlib.Path(f'./{nameDataset}/train')
     test_dir = pathlib.Path(f'./{nameDataset}/test')
@@ -91,6 +98,7 @@ def createDataset(qTrain,qTest):
     os.mkdir(val_dir)
     for videoInfo in labelsWithVids:
         videoNames = videoInfo['videoNames']
+        print(len(videoNames))
         random.shuffle(videoNames)
         trainVideos = videoNames[:qTrain]
         testVideos = videoNames[qTrain:qTrain+qTest]
@@ -99,16 +107,21 @@ def createDataset(qTrain,qTest):
 
         os.mkdir(os.path.join(train_dir,videoInfo["name"]))
         fullPath =  pathlib.Path(f'./{nameDataset}/train/'+videoInfo["name"])
-        downloadVideos(trainVideos,fullPath)
+        downloadVideos(videoPath,trainVideos,fullPath)
 
         os.mkdir(os.path.join(test_dir,videoInfo["name"]))
         fullPath =  pathlib.Path(f'./{nameDataset}/test/'+videoInfo["name"])
-        downloadVideos(testVideos,fullPath)
+        downloadVideos(videoPath,testVideos,fullPath)
 
         os.mkdir(os.path.join(val_dir,videoInfo["name"]))
         fullPath =  pathlib.Path(f'./{nameDataset}/val/'+videoInfo["name"])
-        downloadVideos(valVideos,fullPath)
-
+        downloadVideos(videoPath,valVideos,fullPath)
+    print('Augmenting data...')
+    for videoInfo in labelsAugVids:
+        videoNames = videoInfo['videoNames']
+        fullPath =  pathlib.Path(f'./{nameDataset}/train/'+videoInfo["name"])
+        print(f'Processing Augmented {videoInfo["name"]}...')
+        downloadVideos(videoPathAugmented,videoNames,fullPath)
 createDataset(N_TRAIN,N_TEST)
 #videoList = os.listdir(videoPath)
 #processVideo(os.path.join(videoPath,videoList[5]),'./dataset/esto.avi')   
