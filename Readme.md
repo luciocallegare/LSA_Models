@@ -24,7 +24,7 @@ Then excecute the following command:
 - To train the LRCN model run:
     ```python model.py --model lrcn --name [name of the model]```
 
-# Preprocess experiment videos and live implementation
+### Preprocess experiment videos and live implementation
 
 In this project there was also experimenting done on the input videos. Mainly, videos were transformed to only show visual information about the hands
 through Mediapipe in the videos over a black background. 
@@ -35,16 +35,16 @@ run ```python main.py``` and for run it in a live translation run ```python main
 - The landmarks with skeletal information was drawn over a black background for every frame
 Tu run this approach on videos on './pruebas/serie_prueba_sinGuantes' run ```python main.py``` and for run it in a live translation run ```python main.py --live```
 
-# Tests the models
+### Tests the models
 
 You can run experiments on ```experiments.ipynb```. Please follow the notebook for further information
 
-# Augment data
+### Augment data
 
 To augment the data with different transformations run
 ```python dataAugmentation.py```
 
-# Get dataset data into a json
+### Get dataset data into a json
 
 Dataset labels are depicted in dataset.json. You can regenerate this file running
 ```python.py scrapper```

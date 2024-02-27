@@ -23,11 +23,11 @@ num_classes = 64
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", action='store', help="Determines the model type, conv_lstm or lrcn")
 parser.add_argument("--name",action="store",help="Determines name of the model. If the model exists it will load it and keep training")
-
-if parser.name == None:
+args = parser.parse_args()
+if args.name == None:
    raise Exception("Please specify a name")
 
-nameModel = parser.name
+nameModel = args.name
 
 subset_paths = {
   'train': pathlib.Path('./dataset/train'),
@@ -94,7 +94,7 @@ def convLSTM():
   model = Sequential()
   model.add(ConvLSTM2D(filters=4,kernel_size=(3,3), activation='tanh', data_format='channels_last',
                        recurrent_dropout=0.2,return_sequences=True, input_shape = (N_FRAMES,
-                                                                                   WIDTH, HEIGHT,3)))
+                                                                                   WIDTH, HEIGHT,1)))
   model.add(MaxPooling3D(pool_size=(1,2,2),padding='same',data_format='channels_last'))
   model.add(TimeDistributed(Dropout(0.2)))
 
@@ -198,8 +198,8 @@ def frames_extraction(video_path):
         if not success:
             break
             
-        frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-        #frame = np.expand_dims(frame, axis=-1) 
+        frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+        frame = np.expand_dims(frame, axis=-1) 
 
         # Resize the Frame to fixed height and width.
         resized_frame = cv2.resize(frame, (WIDTH, HEIGHT))
@@ -232,8 +232,8 @@ def get_files_and_class_names(path):
 
 print('Preparando datos...')
 
-with open('x_train_full.npy','wb') as f:
-   np.save(f, get_files_and_class_names(subset_paths['train']))
+# with open('x_train_full.npy','wb') as f:
+#    np.save(f, get_files_and_class_names(subset_paths['train']))
 
 x_train, y_train = get_files_and_class_names(subset_paths['train'])
 X_val, y_val = get_files_and_class_names(subset_paths['val'])
@@ -258,9 +258,9 @@ if os.path.exists(f'./models/{nameModel}'):
    model.fit(x_train, y_train, epochs=50, batch_size=8, validation_data=(X_val, y_val),callbacks=[early_stopping_callback,checkpoint_callback])
    model.save(f'./models/{nameModel}')
 else:
-  if parser.model == 'conv_lstm':
+  if args.model == 'conv_lstm':
     model = convLSTM()
-  elif parser.model == 'lrcn':
+  elif args.model == 'lrcn':
     model = LRCN()
   else:
     raise Exception("Model not found, choose conv_lstm or lrcn")
