@@ -9,7 +9,6 @@ import time
 
 mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
-containers = mp.tasks.components.containers
 MEASURES_MODEL = 224
 N_FRAMES = 20
 
@@ -26,13 +25,14 @@ def identifyHand(landmark,width,height):
 
 def createHandsCanva(height,width,results):
     black_background = np.zeros((height,width,3),dtype = np.uint8)
-    for hand_landmarks in results.multi_hand_landmarks:
-        mp_drawing.draw_landmarks(black_background,
-                                    hand_landmarks,
-                                    mp_hands.HAND_CONNECTIONS,
-                                    #mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2),
-                                    #mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=10, circle_radius=2)
-                                    )
+    if results.multi_hand_landmarks is not None:
+        for hand_landmarks in results.multi_hand_landmarks:
+            mp_drawing.draw_landmarks(black_background,
+                                        hand_landmarks,
+                                        mp_hands.HAND_CONNECTIONS,
+                                        #mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2),
+                                        #mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=10, circle_radius=2)
+                                        )
     return black_background
 
 def drawRectangles(frame,results,width,height,lastSign):
@@ -47,6 +47,42 @@ def drawRectangles(frame,results,width,height,lastSign):
             coordY = handCoord['pt1'][1] + 15
             frame = cv2.putText(frame,f"{lastSign['name']}:{lastSign['percentage']}%",(coordX,coordY),cv2.FONT_HERSHEY_SIMPLEX,0.5,color) 
     return frame
+
+def processVids(path = 0, outPath = 'pruebas/prueba1.avi'):
+    cap = cv2.VideoCapture(path)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    HEIGHT_CANVA = height
+    WIDTH_CANVA = width
+    #print(f'Path del video:{path}\nMedidas del video:{width}x{height}')
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(outPath, fourcc, 30.0, (WIDTH_CANVA,HEIGHT_CANVA), 1)
+    with mp_hands.Hands(
+            static_image_mode= False,
+            max_num_hands= 2,
+            min_detection_confidence= 0.8,
+            min_tracking_confidence = 0.5
+        ) as hands:
+        while cap.isOpened():
+            ret,frame = cap.read()
+            if ret == False:
+                break
+            frame= cv2.flip(frame,1)
+            image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            results = hands.process(image_rgb)
+            height,width,_ = frame.shape
+            handsCanva = createHandsCanva(HEIGHT_CANVA,WIDTH_CANVA,results)
+            #handsCanva = cv2.cvtColor(handsCanva, cv2.COLOR_BGR2GRAY)
+            #handsCanva =  cv2.resize(handsCanva,(MEASURES_MODEL,MEASURES_MODEL))
+            #cv2.imshow('Hand Canva',handsCanva)
+            out.write(handsCanva) 
+            # if cv2.waitKey(1) & 0xFF == 27:
+            #     break
+            cv2.imshow("Image", frame)
+
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()    
 
 def main(path = 0, out = 'pruebas/prueba1.avi'):
     cap = cv2.VideoCapture(path)
@@ -139,4 +175,4 @@ else:
     #videoPaths = videoPaths[45:]
     for index,video_path in enumerate(videoPaths):
         output_path = f'./pruebas/landmarksVids/sign{index+1:02}.avi'
-        main(path=input_path+'/'+video_path,out=output_path)
+        processVids(path=input_path+'/'+video_path,outPath=output_path)

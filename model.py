@@ -1,45 +1,124 @@
-import random
-import pathlib
-
-
+from keras.models import Sequential,load_model
+from keras.layers import ConvLSTM2D, Flatten, MaxPooling3D,TimeDistributed,Dropout, Conv2D,MaxPooling2D, LSTM, Dense
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.utils import Sequence
+#from keras.applications import EfficientNetB0
+#from keras.utils import to_categorical
 import cv2
-import einops
 import numpy as np
-import matplotlib.pyplot as plt
+import json
+import pathlib
+import random
+import os
 
-import tensorflow as tf
-import keras
-from keras import layers
+import argparse
 
-subset_paths = {
-  'train': pathlib.Path('./dataset2/train'),
-  'val': pathlib.Path('./dataset2/val'),
-  'test': pathlib.Path('./dataset2/test')
-}
+os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 
-n_frames = 20
-batch_size = 8
 HEIGHT = 224
 WIDTH = 224
+N_FRAMES = 20
+num_classes = 64
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--model", action='store', help="Determines the model type, conv_lstm or lrcn")
+parser.add_argument("--name",action="store",help="Determines name of the model. If the model exists it will load it and keep training")
 
-def format_frames(frame, output_size):
-  """
-    Pad and resize an image from a video.
+if parser.name == None:
+   raise Exception("Please specify a name")
 
-    Args:
-      frame: Image that needs to resized and padded. 
-      output_size: Pixel size of the output frame image.
+nameModel = parser.name
 
-    Return:
-      Formatted frame with padding of specified output size.
-  """
-  frame = tf.image.convert_image_dtype(frame, tf.float32)
-  frame = tf.image.resize_with_pad(frame, *output_size)
-  frame = frame/255
-  return frame
+subset_paths = {
+  'train': pathlib.Path('./dataset/train'),
+  'val': pathlib.Path('./dataset/val'),
+  'test': pathlib.Path('./dataset/test')
+}
 
-def frames_from_video_file(video_path, n_frames, output_size = (WIDTH,HEIGHT), frame_step = 15):
+class DataGenerator(Sequence):
+    def __init__(self, x_set, y_set, batch_size):
+        self.x, self.y = x_set, y_set
+        self.batch_size = batch_size
+
+    def __len__(self):
+        return int(np.ceil(len(self.x) / float(self.batch_size)))
+
+    def __getitem__(self, idx):
+        batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+        return batch_x, batch_y
+
+def LRCN():
+    model = Sequential()
+    # Capas convolucionales para procesar cada cuadro de video
+    model.add(TimeDistributed(Conv2D(16, (3, 3), padding='same', activation='relu'), input_shape=(N_FRAMES,WIDTH, HEIGHT, 1)))
+    model.add(TimeDistributed(MaxPooling2D(pool_size=(4, 4))))
+    model.add(TimeDistributed(Dropout(0.25)))
+
+    model.add(TimeDistributed(Conv2D(32, (3, 3), padding='same', activation='relu')))
+    model.add(TimeDistributed(MaxPooling2D(pool_size=(4, 4))))
+    model.add(TimeDistributed(Dropout(0.25)))
+
+    model.add(TimeDistributed(Conv2D(64, (3, 3), padding='same', activation='relu')))
+    model.add(TimeDistributed(MaxPooling2D(pool_size=(4, 4))))
+
+    # Capas LSTM para manejar la secuencialidad temporal
+    model.add(TimeDistributed(Flatten()))
+    model.add(LSTM(32))
+
+    # Capa de salida con neuronas igual al número de clases de lengua de señas
+    model.add(Dense(num_classes, activation='softmax'))
+
+    # Compilar el modelo
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+    return model
+
+""" def EffLRCN():
+    model = Sequential()
+    # Capas convolucionales para procesar cada cuadro de video
+    model.add(EfficientNetB0(input_shape=(N_FRAMES,WIDTH, HEIGHT),pooling=(4,4),classes=num_classes,include_top = False))
+    # Capas LSTM para manejar la secuencialidad temporal
+    model.add(TimeDistributed(Flatten()))
+    model.add(LSTM(32))
+
+    # Capa de salida con neuronas igual al número de clases de lengua de señas
+    model.add(Dense(num_classes, activation='softmax'))
+
+    # Compilar el modelo
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+    return model """
+
+def convLSTM():
+  model = Sequential()
+  model.add(ConvLSTM2D(filters=4,kernel_size=(3,3), activation='tanh', data_format='channels_last',
+                       recurrent_dropout=0.2,return_sequences=True, input_shape = (N_FRAMES,
+                                                                                   WIDTH, HEIGHT,3)))
+  model.add(MaxPooling3D(pool_size=(1,2,2),padding='same',data_format='channels_last'))
+  model.add(TimeDistributed(Dropout(0.2)))
+
+  model.add(ConvLSTM2D(filters=8,kernel_size=(3,3), activation='tanh', data_format='channels_last',
+                       recurrent_dropout=0.2,return_sequences=True))
+  model.add(MaxPooling3D(pool_size=(1,2,2),padding='same',data_format='channels_last'))
+  model.add(TimeDistributed(Dropout(0.2)))
+
+  model.add(ConvLSTM2D(filters=14,kernel_size=(3,3), activation='tanh', data_format='channels_last',
+                       recurrent_dropout=0.2,return_sequences=True))
+  model.add(MaxPooling3D(pool_size=(1,2,2),padding='same',data_format='channels_last'))
+  model.add(TimeDistributed(Dropout(0.2)))
+
+  model.add(ConvLSTM2D(filters=16,kernel_size=(3,3), activation='tanh', data_format='channels_last',
+                       recurrent_dropout=0.2,return_sequences=True))
+  model.add(MaxPooling3D(pool_size=(1,2,2),padding='same',data_format='channels_last'))
+
+  model.add(Flatten())
+
+  model.add(Dense(num_classes,activation='softmax'))
+  return model
+  
+
+def groupFrames(video_path, n_frames = N_FRAMES, frame_step = 15):
   """
     Creates frames from each video file present for each category.
 
@@ -53,8 +132,8 @@ def frames_from_video_file(video_path, n_frames, output_size = (WIDTH,HEIGHT), f
   """
   # Read each video frame by frame
   result = []
-  src = cv2.VideoCapture(str(video_path))  
-
+  src = cv2.VideoCapture(video_path)  
+  #print('Procesando video:',video_path)
   video_length = src.get(cv2.CAP_PROP_FRAME_COUNT)
   need_length = 1 + (n_frames - 1) * frame_step
   if need_length > video_length:
@@ -65,211 +144,128 @@ def frames_from_video_file(video_path, n_frames, output_size = (WIDTH,HEIGHT), f
   src.set(cv2.CAP_PROP_POS_FRAMES, start)
   # ret is a boolean indicating whether read was successful, frame is the image itself
   ret, frame = src.read()
-  #frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-  #frame = np.expand_dims(frame, axis=-1) 
-  result.append(format_frames(frame, output_size))
+  frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+  frame = np.expand_dims(frame, axis=-1) 
+  result.append(frame/255)
   for _ in range(n_frames - 1):
     for _ in range(frame_step):
       ret, frame = src.read()
     if ret:
-      #frame = format_frames(frame, output_size)
-      #frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-      #frame = np.expand_dims(frame, axis=-1) 
-      result.append(format_frames(frame, output_size))
+        frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+        frame = np.expand_dims(frame, axis=-1) 
+        result.append(frame/255)
     else:
       result.append(np.zeros_like(result[0]))
   src.release()
-  result = np.array(result)[..., [2, 1, 0]]
+  result = np.array(result)
   #print('SHAPE RESULT',result.shape)
   return result
 
-class FrameGenerator:
-  def __init__(self, path, n_frames, training = False):
-    """ Returns a set of frames with their associated label. 
 
-      Args:
-        path: Video file paths.
-        n_frames: Number of frames. 
-        training: Boolean to determine if training dataset is being created.
-    """
-    self.path = path
-    self.n_frames = n_frames
-    self.training = training
-    self.class_names = sorted(set(p.name for p in self.path.iterdir() if p.is_dir()))
-    self.class_ids_for_name = dict((name, idx) for idx, name in enumerate(self.class_names))
+def frames_extraction(video_path):
+    '''
+    This function will extract the required frames from a video after resizing and normalizing them.
+    Args:
+        video_path: The path of the video in the disk, whose frames are to be extracted.
+    Returns:
+        frames_list: A list containing the resized and normalized frames of the video.
+    '''
+    encoded_string = video_path.encode('latin-1')
+    video_path = encoded_string.decode("utf-8")
+    
+    # Declare a list to store video frames.
+    frames_list = []
+    
+    # Read the Video File using the VideoCapture object.
+    video_reader = cv2.VideoCapture(video_path)
 
-  def get_files_and_class_names(self):
-    video_paths = list(self.path.glob('*/*.avi'))
-    classes = [p.parent.name for p in video_paths] 
-    return video_paths, classes
+    # Get the total number of frames in the video.
+    video_frames_count = int(video_reader.get(cv2.CAP_PROP_FRAME_COUNT))
+    print(f'Video url: {video_path}, video_length:{video_frames_count}')
+    # Calculate the the interval after which frames will be added to the list.
+    skip_frames_window = max(int(video_frames_count/N_FRAMES), 1)
 
-  def __call__(self):
-    video_paths, classes = self.get_files_and_class_names()
-    pairs = list(zip(video_paths, classes))
+    # Iterate through the Video Frames.
+    for frame_counter in range(N_FRAMES):
 
-    if self.training:
-      random.shuffle(pairs)
+        # Set the current frame position of the video.
+        video_reader.set(cv2.CAP_PROP_POS_FRAMES, frame_counter * skip_frames_window)
 
-    for path, name in pairs:
-      video_frames = frames_from_video_file(path, self.n_frames) 
-      #print(name, path)
-      label = self.class_ids_for_name[name] # Encode labels
-      yield video_frames, label
+        # Reading the frame from the video. 
+        success, frame = video_reader.read() 
 
-class Conv2Plus1D(keras.layers.Layer):
-  def __init__(self, filters, kernel_size, padding):
-    """
-      A sequence of convolutional layers that first apply the convolution operation over the
-      spatial dimensions, and then the temporal dimension. 
-    """
-    super().__init__()
-    self.seq = keras.Sequential([  
-        # Spatial decomposition
-        layers.Conv3D(filters=filters,
-                      kernel_size=(1, kernel_size[1], kernel_size[2]),
-                      padding=padding),
-        # Temporal decomposition
-        layers.Conv3D(filters=filters, 
-                      kernel_size=(kernel_size[0], 1, 1),
-                      padding=padding)
-        ])
+        # Check if Video frame is not successfully read then break the loop
+        if not success:
+            break
+            
+        frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+        #frame = np.expand_dims(frame, axis=-1) 
 
-  def call(self, x):
-    return self.seq(x)
+        # Resize the Frame to fixed height and width.
+        resized_frame = cv2.resize(frame, (WIDTH, HEIGHT))
+        
+        # Normalize the resized frame by dividing it with 255 so that each pixel value then lies between 0 and 1
+        normalized_frame = resized_frame / 255
+        
+        # Append the normalized frame into the frames list
+        frames_list.append(normalized_frame)
+    
+    # Release the VideoCapture object. 
+    video_reader.release()
 
-class ResidualMain(keras.layers.Layer):
-  """
-    Residual block of the model with convolution, layer normalization, and the
-    activation function, ReLU.
-  """
-  def __init__(self, filters, kernel_size):
-    super().__init__()
-    self.seq = keras.Sequential([
-        Conv2Plus1D(filters=filters,
-                    kernel_size=kernel_size,
-                    padding='same'),
-        layers.LayerNormalization(),
-        layers.ReLU(),
-        Conv2Plus1D(filters=filters, 
-                    kernel_size=kernel_size,
-                    padding='same'),
-        layers.LayerNormalization()
-    ])
+    # Return the frames list.
+    return frames_list
 
-  def call(self, x):
-    return self.seq(x)
+#input_shape = (cant_videos,cant_frames,img_size)
 
-class Project(keras.layers.Layer):
-  """
-    Project certain dimensions of the tensor as the data is passed through different 
-    sized filters and downsampled. 
-  """
-  def __init__(self, units):
-    super().__init__()
-    self.seq = keras.Sequential([
-        layers.Dense(units),
-        layers.LayerNormalization()
-    ])
+def find_id(labels,name):
+   return list(filter(lambda x: x['name'] == name,labels))[0]
 
-  def call(self, x):
-    return self.seq(x)
+def get_files_and_class_names(path):
+    video_paths = list(path.glob('*/*.avi'))
+    classes = [p.parent.name for p in video_paths]
+    f = open('./dataset.json')
+    labels = json.load(f)
+    classes = np.array(list(map(lambda x: int(find_id(labels,x)['id'])-1,classes)))
+    videos = np.array([frames_extraction(str(p)) for p in video_paths ],dtype='float16')
+    return videos, classes
 
-def add_residual_block(input, filters, kernel_size):
-  """
-    Add residual blocks to the model. If the last dimensions of the input data
-    and filter size does not match, project it such that last dimension matches.
-  """
-  out = ResidualMain(filters, 
-                     kernel_size)(input)
+print('Preparando datos...')
 
-  res = input
-  # Using the Keras functional APIs, project the last dimension of the tensor to
-  # match the new filter size
-  if out.shape[-1] != input.shape[-1]:
-    res = Project(out.shape[-1])(res)
+with open('x_train_full.npy','wb') as f:
+   np.save(f, get_files_and_class_names(subset_paths['train']))
 
-  return layers.add([res, out])
+x_train, y_train = get_files_and_class_names(subset_paths['train'])
+X_val, y_val = get_files_and_class_names(subset_paths['val'])
 
-class ResizeVideo(keras.layers.Layer):
-  def __init__(self, height, width):
-    super().__init__()
-    self.height = height
-    self.width = width
-    self.resizing_layer = layers.Resizing(self.height, self.width)
+#x_train = np.load('x_train_full.npy')
+#y_train = np.load('y_train_full.npy')
+#X_val = np.load('x_val_full.npy')
+#y_val = np.load('y_val_full.npy')
 
-  def call(self, video):
-    """
-      Use the einops library to resize the tensor.  
+print('shape x_train:', x_train.shape)
+print('Empezando creacion de modelo y entrenamiento...')
 
-      Args:
-        video: Tensor representation of the video, in the form of a set of frames.
+early_stopping_callback = EarlyStopping(monitor='val_loss', patience=10, mode='min', restore_best_weights= True)
+checkpoint_callback = ModelCheckpoint(nameModel,save_best_only=True,monitor='val_loss',mode='min')
 
-      Return:
-        A downsampled size of the video according to the new height and width it should be resized to.
-    """
-    # b stands for batch size, t stands for time, h stands for height, 
-    # w stands for width, and c stands for the number of channels.
-    old_shape = einops.parse_shape(video, 'b t h w c')
-    images = einops.rearrange(video, 'b t h w c -> (b t) h w c')
-    images = self.resizing_layer(images)
-    videos = einops.rearrange(
-        images, '(b t) h w c -> b t h w c',
-        t = old_shape['t'])
-    return videos
+train_gen = DataGenerator(x_train, y_train, 8)
+val_gen = DataGenerator(X_val, y_val, 8)
 
-def main():
-  output_signature = (tf.TensorSpec(shape = (None, None, None,3), dtype = tf.float32),
-                      tf.TensorSpec(shape = (), dtype = tf.int16))
-  val_ds = tf.data.Dataset.from_generator(FrameGenerator(subset_paths['val'], n_frames),
-                                          output_signature = output_signature)
-  val_ds = val_ds.batch(batch_size)
-  train_ds = tf.data.Dataset.from_generator(FrameGenerator(subset_paths['train'],n_frames,training=True),
-                                            output_signature = output_signature)
-  train_ds = train_ds.batch(batch_size)
-  test_ds = tf.data.Dataset.from_generator(FrameGenerator(subset_paths['test'], n_frames),
-                                          output_signature = output_signature)
-  test_ds = test_ds.batch(batch_size)
+if os.path.exists(f'./models/{nameModel}'):
+   print('Loading saved model...')
+   model = load_model(f'./models/{nameModel}')
+   model.fit(x_train, y_train, epochs=50, batch_size=8, validation_data=(X_val, y_val),callbacks=[early_stopping_callback,checkpoint_callback])
+   model.save(f'./models/{nameModel}')
+else:
+  if parser.model == 'conv_lstm':
+    model = convLSTM()
+  elif parser.model == 'lrcn':
+    model = LRCN()
+  else:
+    raise Exception("Model not found, choose conv_lstm or lrcn")
+  model.compile(loss='sparse_categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
+  model.summary()
+  model.fit(train_gen, epochs=60, batch_size=8, validation_data=val_gen,callbacks=[early_stopping_callback,checkpoint_callback])
 
-  input_shape = (None, n_frames, HEIGHT, WIDTH, 3)
-  input = layers.Input(shape=(input_shape[1:]))
-  x = input
-
-  x = Conv2Plus1D(filters=16, kernel_size=(3, 7, 7), padding='same')(x)
-  x = layers.BatchNormalization()(x)
-  x = layers.ReLU()(x)
-  x = ResizeVideo(HEIGHT // 2, WIDTH // 2)(x)
-
-  # Block 1
-  x = add_residual_block(x, 16, (3, 3, 3))
-  x = ResizeVideo(HEIGHT // 4, WIDTH // 4)(x)
-
-  # Block 2
-  x = add_residual_block(x, 32, (3, 3, 3))
-  x = ResizeVideo(HEIGHT // 8, WIDTH // 8)(x)
-
-  # Block 3
-  x = add_residual_block(x, 64, (3, 3, 3))
-  x = ResizeVideo(HEIGHT // 16, WIDTH // 16)(x)
-
-  # Block 4
-  x = add_residual_block(x, 128, (3, 3, 3))
-
-  x = layers.GlobalAveragePooling3D()(x)
-  x = layers.Flatten()(x)
-  x = layers.Dense(64)(x)
-
-  model = keras.Model(input, x)
-
-  frames, label = next(iter(train_ds))
-  model.build(frames)
-  model.compile(loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True), 
-                optimizer = keras.optimizers.Adam(learning_rate = 0.001), #original 0.0001
-                metrics = ['accuracy'])
-  history = model.fit(x = train_ds,
-                      epochs = 50, 
-                      validation_data = val_ds)
-
-  model.save("lsa_rna")
-
-
-main()
+  model.save(f'./models/{nameModel}')
