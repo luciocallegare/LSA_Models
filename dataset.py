@@ -6,6 +6,7 @@ from tqdm import tqdm
 import pathlib
 import random
 import copy
+import argparse
 
 boundaries = [
     ([0, 120, 0], [140, 255, 100]), #VERDE Izquierda
@@ -43,10 +44,15 @@ def handSegmentByHand(frame,hand):
     output = cv2.bitwise_and(frame, frame, mask=mask)
     return output
 
-def processVideo(video,path):
+def processVideo(video,path,color):
     cap = cv2.VideoCapture(video)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(path, fourcc, 30.0, (224,224),1)
+    outFormat = 0
+    frameFormat = cv2.COLOR_BGR2GRAY
+    if color:
+        outFormat = 1
+        frameFormat = cv2.COLOR_BGR2RGB
+    out = cv2.VideoWriter(path, fourcc, 30.0, (224,224),outFormat)
     nframe = 0
     #print('PROCESS VIDEO PATH',path)
     #print('PROCESS VIDEO VIDEO',video)
@@ -58,7 +64,7 @@ def processVideo(video,path):
         frame = cv2.resize(frame,(224,224))        
         frame = cv2.flip(frame,1)
         frame = handSegment(frame)
-        #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame = cv2.cvtColor(frame, frameFormat)
         #cv2.imshow('output',frame)
         #if cv2.waitKey(1) & 0xFF == 27:
             #break
@@ -72,17 +78,34 @@ def getVideosPerClass(dict,videos):
         elem['videoNames'] = list(filter(lambda x:x.split('_')[0] == idVids,videos))
     return dict
 
-def downloadVideos(rootPath,videoPaths,destPath):
+def downloadVideos(rootPath,videoPaths,destPath,color):
     print(f"{destPath}:")
     for video in tqdm(videoPaths):
         videoDest = video.replace('mp4','avi')
-        processVideo(os.path.join(rootPath,video),str(destPath)+'/'+videoDest)
-        
+        processVideo(os.path.join(rootPath,video),str(destPath)+'/'+videoDest,color)
+
+def augmentData(label,nameDataset,color):
+    videoPathAugmented = "./pruebas/dataAugmented"
+    videoListAug = os.listdir(videoPathAugmented)
+    labelAug = copy.deepcopy(label)
+    labelsAugVids = getVideosPerClass(labelAug,videoListAug)    
+    print('Augmenting data...')
+    for videoInfo in labelsAugVids:
+        videoNames = videoInfo['videoNames']
+        fullPath =  pathlib.Path(f'./{nameDataset}/train/'+videoInfo["name"])
+        print(f'Processing Augmented {videoInfo["name"]}...')
+        downloadVideos(videoPathAugmented,videoNames,fullPath,color)
+
 def createDataset(qTrain,qTest):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--aug", action='store_true', help="Determines if you want to include augmented data")
+    parser.add_argument("--name",action="store",help="Determines name of the dataset. Defaults to 'dataset'")
+    parser.add_argument("--color",action="store_true",help="Add color to videos")
+    args = parser.parse_args()
+    if args.name is not None:
+        nameDataset = args.name
     videoList = os.listdir(videoPath)
     #videoListAug = os.listdir(videoPathAugmented)
-    #print(len(videoList))
-    #print(len(videoListAug))
     f = open('./dataset.json')
     label = json.load(f)
     # labelAug = copy.deepcopy(label)
@@ -107,21 +130,15 @@ def createDataset(qTrain,qTest):
 
         os.mkdir(os.path.join(train_dir,videoInfo["name"]))
         fullPath =  pathlib.Path(f'./{nameDataset}/train/'+videoInfo["name"])
-        downloadVideos(videoPath,trainVideos,fullPath)
+        downloadVideos(videoPath,trainVideos,fullPath,args.color)
 
         os.mkdir(os.path.join(test_dir,videoInfo["name"]))
         fullPath =  pathlib.Path(f'./{nameDataset}/test/'+videoInfo["name"])
-        downloadVideos(videoPath,testVideos,fullPath)
+        downloadVideos(videoPath,testVideos,fullPath,args.color)
 
         os.mkdir(os.path.join(val_dir,videoInfo["name"]))
         fullPath =  pathlib.Path(f'./{nameDataset}/val/'+videoInfo["name"])
-        downloadVideos(videoPath,valVideos,fullPath)
-    # print('Augmenting data...')
-    # for videoInfo in labelsAugVids:
-    #     videoNames = videoInfo['videoNames']
-    #     fullPath =  pathlib.Path(f'./{nameDataset}/train/'+videoInfo["name"])
-    #     print(f'Processing Augmented {videoInfo["name"]}...')
-    #     downloadVideos(videoPathAugmented,videoNames,fullPath)
+        downloadVideos(videoPath,valVideos,fullPath,args.color)
+    if args.aug:
+        augmentData(label,nameDataset,args.color)
 createDataset(N_TRAIN,N_TEST)
-#videoList = os.listdir(videoPath)
-#processVideo(os.path.join(videoPath,videoList[5]),'./dataset/esto.avi')   

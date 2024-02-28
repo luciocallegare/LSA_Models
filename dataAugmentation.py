@@ -58,7 +58,6 @@ for video in vids:
     seq = va.Sequential([
         sometimes(va.RandomTranslate(100,250)),
         va.CenterCrop((cropHeight+100,cropWidth+100)),
-        sometimes(va.HorizontalFlip())
     ])
     #augment the frames
     video_aug = seq(frames)
